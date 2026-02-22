@@ -1,0 +1,128 @@
+import tkinter as tk
+from tkinter import ttk
+
+# -------------------------------------------------------
+# Sample embedding tables (EV tables)
+# -------------------------------------------------------
+
+USER_EMB = {
+    "UserA": [0.1, 0.2, 0.3],
+    "UserB": [0.4, 0.1, 0.2],
+    "UserC": [0.2, 0.3, 0.1],
+}
+
+ITEM_EMB = {
+    "ItemX": [0.5, 0.1, 0.0],
+    "ItemY": [0.0, 0.2, 0.4],
+    "ItemZ": [0.3, 0.3, 0.3],
+}
+
+LOC_EMB = {
+    "Loc1": [0.2, 0.2, 0.2],
+    "Loc2": [0.1, 0.0, 0.4],
+    "Loc3": [0.3, 0.1, 0.1],
+}
+
+# Simple "DNN" weights for demo: dense(9) -> scalar
+DNN_WEIGHTS = [0.3, 0.1, 0.2, 0.4, 0.2, 0.1, 0.5, 0.3, 0.1]
+
+
+# -------------------------------------------------------
+# Logic
+# -------------------------------------------------------
+
+def run_pipeline():
+    user = user_var.get()
+    item = item_var.get()
+    loc = loc_var.get()
+
+    u_vec = USER_EMB[user]
+    i_vec = ITEM_EMB[item]
+    l_vec = LOC_EMB[loc]
+
+    # Dense features = concatenated embeddings
+    dense = u_vec + i_vec + l_vec
+    dense_label.config(text=str(dense))
+
+    # Feature interaction: simple binary vector (thresholded)
+    bits = ''.join('1' if v > 0.2 else '0' for v in dense)
+    interaction_label.config(text=bits)
+
+    # Toy DNN: dense · weights
+    score = sum(v * w for v, w in zip(dense, DNN_WEIGHTS))
+    dnn_output_label.config(text=f"Score: {score:.3f}")
+
+
+# -------------------------------------------------------
+# UI
+# -------------------------------------------------------
+
+root = tk.Tk()
+root.title("Sparse → EV Table → Dense → DNN Demo")
+root.geometry("950x350")
+
+# --- Sparse Feature block ---
+sparse_frame = ttk.LabelFrame(root, text="Sparse Feature", padding=10)
+sparse_frame.grid(row=0, column=0, padx=10, pady=10, sticky="n")
+
+ttk.Label(sparse_frame, text="User").grid(row=0, column=0, sticky="w")
+ttk.Label(sparse_frame, text="Item").grid(row=1, column=0, sticky="w")
+ttk.Label(sparse_frame, text="Loc").grid(row=2, column=0, sticky="w")
+
+user_var = tk.StringVar(value="UserA")
+item_var = tk.StringVar(value="ItemX")
+loc_var = tk.StringVar(value="Loc1")
+
+user_menu = ttk.OptionMenu(sparse_frame, user_var, "UserA", *USER_EMB.keys())
+item_menu = ttk.OptionMenu(sparse_frame, item_var, "ItemX", *ITEM_EMB.keys())
+loc_menu = ttk.OptionMenu(sparse_frame, loc_var, "Loc1", *LOC_EMB.keys())
+
+user_menu.grid(row=0, column=1, padx=5, pady=2)
+item_menu.grid(row=1, column=1, padx=5, pady=2)
+loc_menu.grid(row=2, column=1, padx=5, pady=2)
+
+# arrow label
+ttk.Label(root, text="→", font=("Arial", 24)).grid(row=0, column=1)
+
+# --- EV Table Lookup block ---
+ev_frame = ttk.LabelFrame(root, text="EV Table Lookup", padding=10)
+ev_frame.grid(row=0, column=2, padx=10, pady=10, sticky="n")
+
+ttk.Label(ev_frame, text="Looks up embedding\nvectors for User/Item/Loc").pack()
+run_button = ttk.Button(ev_frame, text="Run Lookup", command=run_pipeline)
+run_button.pack(pady=10)
+
+# arrow label
+ttk.Label(root, text="→", font=("Arial", 24)).grid(row=0, column=3)
+
+# --- Dense Features block ---
+dense_frame = ttk.LabelFrame(root, text="Dense Features", padding=10)
+dense_frame.grid(row=0, column=4, padx=10, pady=10, sticky="n")
+
+ttk.Label(dense_frame, text="Concatenated vector").pack(anchor="w")
+dense_label = ttk.Label(dense_frame, text="[ ]", wraplength=200, justify="left")
+dense_label.pack(anchor="w", pady=5)
+
+# arrow label (down to feature interaction)
+ttk.Label(root, text="↓", font=("Arial", 24)).grid(row=1, column=4)
+
+# --- Feature Interaction block ---
+fi_frame = ttk.LabelFrame(root, text="Feature Interaction", padding=10)
+fi_frame.grid(row=2, column=4, padx=10, pady=10, sticky="n")
+
+ttk.Label(fi_frame, text="Simple bitstring").pack(anchor="w")
+interaction_label = ttk.Label(fi_frame, text="000000000", font=("Courier", 10))
+interaction_label.pack(anchor="w", pady=5)
+
+# arrow label
+ttk.Label(root, text="→", font=("Arial", 24)).grid(row=2, column=5)
+
+# --- DNN block ---
+dnn_frame = ttk.LabelFrame(root, text="DNN", padding=10)
+dnn_frame.grid(row=2, column=6, padx=10, pady=10, sticky="n")
+
+ttk.Label(dnn_frame, text="Tiny model output").pack(anchor="w")
+dnn_output_label = ttk.Label(dnn_frame, text="Score: -", font=("Arial", 12, "bold"))
+dnn_output_label.pack(anchor="w", pady=5)
+
+root.mainloop()
